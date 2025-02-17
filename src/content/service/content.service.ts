@@ -9,11 +9,23 @@ import {
 } from '@nestjs/common'
 import { ContentRepository } from 'src/content/repository'
 import { ProvisionDto } from 'src/content/dto'
+import { ContentMetadata } from 'src/content/factory'
+import { ContentType } from 'src/content/factory/content.enum'
+
+interface ContentBase {
+  id: string
+  title: string
+  cover: string
+  created_at: Date
+  description: string
+  total_likes: number
+  type: ContentType
+}
 
 @Injectable()
 export class ContentService {
   private readonly logger = new Logger(ContentService.name)
-  private readonly expirationTime = 3600 // 1 hour
+  private readonly expirationTime = 3600
 
   constructor(private readonly contentRepository: ContentRepository) {}
 
@@ -48,91 +60,67 @@ export class ContentService {
     }
 
     const url = this.generateSignedUrl(content.url || '')
-
-    if (!content.type) {
-      this.logger.warn(`Missing content type for ID=${contentId}`)
-      throw new BadRequestException('Content type is missing')
+    if (!content.type || !Object.values(ContentType).includes(content.type as ContentType)) {
+      this.logger.warn(`Unsupported content type for ID=${contentId}, type=${content.type}`)
+      throw new BadRequestException(`Unsupported content type: ${content.type}`)
     }
 
-    if (['pdf', 'image', 'video', 'link'].includes(content.type)) {
-      switch (content.type) {
-        case 'pdf':
-          return {
-            id: content.id,
-            title: content.title,
-            cover: content.cover,
-            created_at: content.created_at,
-            description: content.description,
-            total_likes: content.total_likes,
-            type: 'pdf',
-            url,
-            allow_download: true,
-            is_embeddable: false,
-            format: 'pdf',
-            bytes,
-            metadata: {
-              author: 'Unknown',
-              pages: Math.floor(bytes / 50000) || 1,
-              encrypted: false,
-            },
-          }
-        case 'image':
-          return {
-            id: content.id,
-            title: content.title,
-            cover: content.cover,
-            created_at: content.created_at,
-            description: content.description,
-            total_likes: content.total_likes,
-            type: 'image',
-            url,
-            allow_download: true,
-            is_embeddable: true,
-            format: path.extname(content.url || '').slice(1) || 'jpg',
-            bytes,
-            metadata: { resolution: '1920x1080', aspect_ratio: '16:9' },
-          }
-        case 'video':
-          return {
-            id: content.id,
-            title: content.title,
-            cover: content.cover,
-            created_at: content.created_at,
-            description: content.description,
-            total_likes: content.total_likes,
-            type: 'video',
-            url,
-            allow_download: false,
-            is_embeddable: true,
-            format: path.extname(content.url || '').slice(1) || 'mp4',
-            bytes,
-            metadata: { duration: Math.floor(bytes / 100000) || 10, resolution: '1080p' },
-          }
-        case 'link':
-          return {
-            id: content.id,
-            title: content.title,
-            cover: content.cover,
-            created_at: content.created_at,
-            description: content.description,
-            total_likes: content.total_likes,
-            type: 'link',
-            url: content.url || 'http://default.com',
-            allow_download: false,
-            is_embeddable: true,
-            format: null,
-            bytes: 0,
-            metadata: { trusted: content.url?.includes('https') || false },
-          }
-      }
-    }
-
-    this.logger.warn(`Unsupported content type for ID=${contentId}, type=${content.type}`)
-    throw new BadRequestException(`Unsupported content type: ${content.type}`)
+    return this.getContentByType(content, bytes, url)
   }
 
   private generateSignedUrl(originalUrl: string): string {
     const expires = Math.floor(Date.now() / 1000) + this.expirationTime
     return `${originalUrl}?expires=${expires}&signature=${Math.random().toString(36).substring(7)}`
+  }
+
+  private getContentByType(content: ContentBase, bytes: number, url: string): ProvisionDto {
+    const metadata = this.getMetadata(content, bytes)
+
+    return {
+      id: content.id,
+      title: content.title,
+      cover: content.cover,
+      created_at: content.created_at,
+      description: content.description,
+      total_likes: content.total_likes,
+      type: content.type,
+      url,
+      allow_download: content.type !== ContentType.LINK && content.type != ContentType.VIDEO,
+      is_embeddable: content.type !== ContentType.PDF,
+      format: this.getFormat(content),
+      bytes,
+      metadata,
+    }
+  }
+
+  private getMetadata(
+    content: { type: ContentType; url?: string },
+    bytes: number,
+  ): ContentMetadata[ContentType] {
+    switch (content.type) {
+      case ContentType.PDF:
+        return {
+          author: 'Unknown',
+          pages: Math.floor(bytes / 50000) || 1,
+          encrypted: false,
+        }
+      case ContentType.IMAGE:
+        return { resolution: '1920x1080', aspect_ratio: '16:9' }
+      case ContentType.VIDEO:
+        return { duration: Math.floor(bytes / 100000) || 10, resolution: '1080p' }
+      case ContentType.LINK:
+        return { trusted: content.url?.includes('https') || false }
+      case ContentType.TXT:
+        return { encoding: 'UTF-8', line_count: Math.floor(bytes / 100) || 1 }
+      default:
+        throw new BadRequestException('Invalid content type')
+    }
+  }
+
+  private getFormat(content: { type: ContentType; url?: string }): string | null {
+    if (content.url && content.type !== ContentType.LINK) {
+      return path.extname(content.url).slice(1) || null
+    }
+    return null
   }
 }

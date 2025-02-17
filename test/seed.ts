@@ -102,6 +102,18 @@ export const seedDatabase = async (dataSource: DataSource) => {
     ),
     queryRunner.manager.save(
       queryRunner.manager.create(Content, {
+        id: '6969d6c7-40ea-4a3c-b635-d6546b97b4f6',
+        title: 'Arquivo de texto',
+        description: '',
+        url: 'http://localhost:3000/uploads/texto.txt',
+        cover: null,
+        type: 'txt',
+        total_likes: 8,
+        company: createdCompany1,
+      }),
+    ),
+    queryRunner.manager.save(
+      queryRunner.manager.create(Content, {
         id: 'd060ab17-c961-4de7-929f-a0d52aa3ecf4',
         title: 'Inteligência artificial',
         description: null,

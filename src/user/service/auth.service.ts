@@ -15,7 +15,8 @@ export class AuthService {
       return await this.userRepository.findById(decoded.user_id)
     } catch (error) {
       this.logger.error(`Error validating token: ${error}`)
-      throw Error('Invalid token')
+
+      throw new Error('Invalid token')
     }
   }
 }

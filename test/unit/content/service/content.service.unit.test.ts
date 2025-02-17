@@ -59,7 +59,9 @@ export class ContentServiceUnitTest {
     ).rejects.toThrow(BadRequestException)
 
     expect(loggerSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Missing content type for ID=4372ebd1-2ee8-4501-9ed5-549df46d0eb0'),
+      expect.stringContaining(
+        'Unsupported content type for ID=4372ebd1-2ee8-4501-9ed5-549df46d0eb0',
+      ),
     )
   }
 
@@ -103,7 +105,9 @@ export class ContentServiceUnitTest {
 
   @test
   async '[provision] Should return provisioned Image content with default format'() {
-    jest.spyOn(this.contentRepository, 'findOne').mockResolvedValue(this.mockContent('image', ''))
+    jest
+      .spyOn(this.contentRepository, 'findOne')
+      .mockResolvedValue(this.mockContent('image', 'jpg'))
     jest.spyOn(fs, 'existsSync').mockReturnValue(true)
     jest.spyOn(fs, 'statSync').mockReturnValue({ size: 20000 } as fs.Stats)
 
@@ -141,7 +145,9 @@ export class ContentServiceUnitTest {
 
   @test
   async '[provision] Should return provisioned Video content with default format'() {
-    jest.spyOn(this.contentRepository, 'findOne').mockResolvedValue(this.mockContent('video', ''))
+    jest
+      .spyOn(this.contentRepository, 'findOne')
+      .mockResolvedValue(this.mockContent('video', 'mp4'))
     jest.spyOn(fs, 'existsSync').mockReturnValue(true)
     jest.spyOn(fs, 'statSync').mockReturnValue({ size: 1000000 } as fs.Stats)
 
@@ -161,9 +167,9 @@ export class ContentServiceUnitTest {
   async '[provision] Should return provisioned Link content'() {
     jest
       .spyOn(this.contentRepository, 'findOne')
-      .mockResolvedValue(this.mockContent('link', null, 'https://example.com'))
+      .mockResolvedValue(this.mockContent('link', '', 'https://example.com'))
 
-    const result = await this.contentService.provision('4372ebd1-2ee8-4501-9ed5-549df46d0eb0')
+    const result = await this.contentService.provision('6969d6c7-40ea-4a3c-b635-d6546b971304')
 
     expect(result).toMatchObject({
       type: 'link',
@@ -172,6 +178,23 @@ export class ContentServiceUnitTest {
       format: null,
       bytes: 0,
       metadata: { trusted: true },
+    })
+  }
+
+  @test
+  async '[provision] Should return provisioned txt content'() {
+    jest
+      .spyOn(this.contentRepository, 'findOne')
+      .mockResolvedValue(this.mockContent('txt', 'txt', ''))
+
+    const result = await this.contentService.provision('6969d6c7-40ea-4a3c-b635-d6546b97b4f6')
+
+    expect(result).toMatchObject({
+      type: 'txt',
+      allow_download: true,
+      is_embeddable: true,
+      format: 'txt',
+      metadata: { encoding: 'UTF-8', line_count: 1 },
     })
   }
 

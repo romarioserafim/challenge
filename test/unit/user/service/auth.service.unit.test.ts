@@ -11,7 +11,7 @@ export class AuthServiceUnitTest {
   private userRepository: UserRepository
 
   private readonly mockUser: User = {
-    id: '12345',
+    id: '18c37ce2-cd34-4305-9ca4-c15fc736beac',
     name: 'John Doe',
     email: 'john.doe@example.com',
     password: 'hashed-password',
@@ -38,7 +38,14 @@ export class AuthServiceUnitTest {
   async '[validateToken] Should return user for valid token'() {
     const validToken = jwt.sign({ user_id: this.mockUser.id }, process.env.JWT_SECRET || 'secret')
 
-    jest.spyOn(jwt, 'verify').mockReturnValue({ user_id: this.mockUser.id })
+    jest.spyOn(jwt, 'verify').mockImplementation((token) => {
+      if (token === validToken) {
+        return { user_id: this.mockUser.id }
+      } else {
+        throw new Error('Invalid token')
+      }
+    })
+
     jest.spyOn(this.userRepository, 'findById').mockResolvedValue(this.mockUser)
 
     const result = await this.authService.validateToken(validToken)
