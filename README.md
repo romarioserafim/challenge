@@ -45,3 +45,20 @@ Caso precise criar novas migrations, utilize o comando:
 ```bash
 npm run db:create_migration --name=create-xpto-table
 ```
+
+
+### Mudanças
+
+Mudanças aplicadas:
+
+Encontrado o problema de segurança no repository de content, era um sql injection, feito a tratativa para resolver o problema.
+
+Feito melhorias no content.service adicionando Enum e mudando a escrita do código com segregações de funções.
+
+Adicionado novo tipo de provisionamento para TXT.
+
+Ajuste nos testes que estavam quebrando.
+
+
+
+
