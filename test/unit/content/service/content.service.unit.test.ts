@@ -214,7 +214,7 @@ export class ContentServiceUnitTest {
 
   @test
   async '[provision] Should throw NotFoundException if database query fails'() {
-    jest.spyOn(this.contentRepository, 'findOne').mockRejectedValue(new Error('DB error'))
+    jest.spyOn(this.contentRepository, 'findOne').mockRejectedValue(new NotFoundException())
 
     await expect(
       this.contentService.provision('4372ebd1-2ee8-4501-9ed5-549df46d0eb0'),
@@ -232,8 +232,12 @@ export class ContentServiceUnitTest {
 
   @test
   async '[provision] Should log file system errors but not fail'() {
+    const contentId = '4372ebd1-2ee8-4501-9ed5-549df46d0eb0'
+
     jest.spyOn(this.contentRepository, 'findOne').mockResolvedValue(this.mockContent('pdf', 'pdf'))
-    jest.spyOn(fs, 'existsSync').mockImplementation(() => {
+
+    jest.spyOn(fs, 'existsSync').mockReturnValue(true)
+    jest.spyOn(fs, 'statSync').mockImplementation(() => {
       throw new Error('File system error')
     })
 
@@ -241,9 +245,10 @@ export class ContentServiceUnitTest {
       .spyOn(this.contentService['logger'], 'error')
       .mockImplementation(() => {})
 
-    const result = await this.contentService.provision('4372ebd1-2ee8-4501-9ed5-549df46d0eb0')
+    const result = await this.contentService.provision(contentId)
 
     expect(loggerSpy).toHaveBeenCalledWith(expect.stringContaining('File system error'))
+
     expect(result.bytes).toBe(0)
   }
 }

@@ -46,7 +46,6 @@ Caso precise criar novas migrations, utilize o comando:
 npm run db:create_migration --name=create-xpto-table
 ```
 
-
 ### Mudanças
 
 Mudanças aplicadas:
@@ -58,7 +57,3 @@ Feito melhorias no content.service adicionando Enum e mudando a escrita do códi
 Adicionado novo tipo de provisionamento para TXT.
 
 Ajuste nos testes que estavam quebrando.
-
-
-
-
